@@ -23,8 +23,10 @@ func main() {
 	h := hub.NewHub()
 	go h.Run()
 
-	http.HandleFunc("/", handlers.ServeHome)
-	http.HandleFunc("/ws", handlers.HandleWebSocket(h))
+	http.HandleFunc("/", serveHome)
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		hub.ServeWs(h, w, r)
+	})
 
 	log.Println("Server stating on :8080")
 	err := http.ListenAndServe(":8080", nil)

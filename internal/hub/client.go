@@ -1,8 +1,8 @@
 package hub
 
 import (
-	"bytes"
 	"log"
+	game "multi-draw/internal/drawing"
 	"net/http"
 	"time"
 
@@ -36,7 +36,7 @@ var upgrader = websocket.Upgrader{
 type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
-	send chan []byte
+	send chan game.Stroke
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -53,15 +53,15 @@ func (c *Client) ReadPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.conn.ReadMessage()
+		var s game.Stroke
+		err := c.conn.ReadJSON(&s)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-		message = bytes.TrimSpace(bytes.ReplaceAll(message, newline, space))
-		c.hub.broadcast <- message
+		c.hub.broadcast <- s
 	}
 }
 
@@ -71,6 +71,30 @@ func (c *Client) ReadPump() {
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
 func (c *Client) WritePump() {
+	ticker := time.NewTicker(pingPeriod)
+	defer func() {
+		ticker.Stop()
+		c.conn.Close()
+	}()
+	for {
+		select {
+		case stroke, ok := <-c.send:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if !ok {
+				// The hub closed the channel.
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			if err := c.conn.WriteJSON(stroke); err != nil {
+				return
+			}
+		case <-ticker.C:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		}
+	}
 }
 
 func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
@@ -80,7 +104,7 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
+	client := &Client{hub: hub, conn: conn, send: make(chan game.Stroke, 256)}
 	client.hub.register <- client
 	go client.WritePump()
 	go client.ReadPump()

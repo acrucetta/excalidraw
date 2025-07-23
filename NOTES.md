@@ -20,12 +20,14 @@ Messages
 - 'erase' -> point (x,y) to point(x,y)
 
 Architecture
-
 Hub processes messages from all registered clients
 Broadcast service sends the message to all the client browsers
+
+Tasks:
+
+- [] Update the chat / message hub to display small drawings in the shared HTML
+  - Send points to the HTML, then have the HTML draw them
 
 References:
 
 - Websocket Chat Example: <https://github.com/gorilla/websocket/tree/main/examples/chat>
-
-
