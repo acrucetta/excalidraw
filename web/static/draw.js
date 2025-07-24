@@ -13,35 +13,55 @@ window.addEventListener('load', () => {
 
       // Draw incoming strokes
       ws.addEventListener('message', ev => {
-        const stroke.JSON.parse(ev.)
+        const stroke = JSON.parse(ev.data);
+        for (let index = 1; index < stroke.Points.length; index++) {
+          const p0 = stroke.Points[index-1];
+          const p1 = stroke.Points[index];
+          drawLine(p0.X, p0.Y, p1.X, p1.Y, stroke.Color, stroke.Width);
+        }
       })
 
       // Start drawing
       canvas.addEventListener('mousedown', e => {
         drawing = true;
         [lastX, lastY] = [e.offsetX, e.offsetY];
+        currentStroke = {
+        Points: [{X: lastX, Y:lastY}],
+        Color: '#000',
+        Widht: 2,
+        PlayerID: 'user123'
+      }
       });
 
       // Draw as the mouse moves
       canvas.addEventListener('mousemove', e => {
-        if (!drawing) return;
-        drawLine(lastX, lastY, e.offsetX, e.offsetY);
-        [lastX, lastY] = [e.offsetX, e.offsetY];
-      });
+          if (!drawing) return;
+          const x = e.offsetX, y = e.offsetY;
+
+          // draw the new segment locally
+          drawLine(lastX, lastY, x, y, currentStroke.Color, currentStroke.Width);
+
+          // append to our stroke and send the updated array
+          currentStroke.Points.push({ X: x, Y: y });
+          ws.send(JSON.stringify(currentStroke));
+
+          lastX = x;
+          lastY = y;
+        });
 
       // Stop drawing
       ['mouseup','mouseout'].forEach(evt =>
-        canvas.addEventListener(evt, () => drawing = false)
+        canvas.addEventListener(evt, () => {drawing = false, currentStroke = null})
       );
 
       // The actual drawing function
-      function drawLine(x0, y0, x1, y1) {
-        ctx.beginPath();            // start a new drawing path
-        ctx.moveTo(x0, y0);         // move “pen” to last point
-        ctx.lineTo(x1, y1);         // draw a line to the new point
-        ctx.strokeStyle = '#000';   // stroke color
-        ctx.lineWidth   = 2;        // line thickness
-        ctx.stroke();               // actually paint the line
-        ctx.closePath();            // finish this path
+      function drawLine(x0, y0, x1, y1, color, width) {
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.strokeStyle = color;
+        ctx.lineWidth   = width;
+        ctx.stroke();
+        ctx.closePath();
       }
     });
