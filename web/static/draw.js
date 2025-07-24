@@ -6,6 +6,7 @@ window.addEventListener('load', () => {
 
       let drawing  = false;
       let lastX = 0, lastY = 0;
+      let currentStroke = null;
 
       ws.addEventListener("open", (event) => {
         console.log()
