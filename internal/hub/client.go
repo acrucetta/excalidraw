@@ -1,8 +1,10 @@
 package hub
 
 import (
+	"encoding/json"
 	"log"
 	game "multi-draw/internal/drawing"
+	"multi-draw/internal/jsonlog"
 	"net/http"
 	"time"
 
@@ -20,12 +22,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 512
-)
-
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
+	maxMessageSize = 4096
 )
 
 var upgrader = websocket.Upgrader{
@@ -34,9 +31,10 @@ var upgrader = websocket.Upgrader{
 }
 
 type Client struct {
-	hub  *Hub
-	conn *websocket.Conn
-	send chan game.Stroke
+	hub    *Hub
+	conn   *websocket.Conn
+	send   chan game.StrokeSegment
+	logger *jsonlog.Logger
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -53,14 +51,22 @@ func (c *Client) ReadPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		var s game.Stroke
-		err := c.conn.ReadJSON(&s)
+		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				c.logger.PrintError(err, nil)
 			}
 			break
 		}
+		var s game.StrokeSegment
+		if err := json.Unmarshal(message, &s); err != nil {
+			c.logger.PrintError(err, map[string]any{
+				"message": "Error parsing the JSON structure",
+			})
+		}
+		c.logger.PrintInfo("Received new stroke", map[string]any{
+			"segment": s,
+		})
 		c.hub.broadcast <- s
 	}
 }
@@ -97,14 +103,15 @@ func (c *Client) WritePump() {
 	}
 }
 
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, logger *jsonlog.Logger) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	client := &Client{hub: hub, conn: conn, send: make(chan game.Stroke, 256)}
+	client := &Client{hub: hub, conn: conn, send: make(chan game.StrokeSegment, 256), logger: logger}
+	logger.PrintInfo("Registering a new client", map[string]any{})
 	client.hub.register <- client
 	go client.WritePump()
 	go client.ReadPump()

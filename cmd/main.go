@@ -2,8 +2,10 @@ package main
 
 import (
 	"log"
-	"multi-draw/internal/hub"
+	hub "multi-draw/internal/hub"
+	"multi-draw/internal/jsonlog"
 	"net/http"
+	"os"
 )
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
@@ -23,12 +25,14 @@ func main() {
 	h := hub.NewHub()
 	go h.Run()
 
+	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
+
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		hub.ServeWs(h, w, r)
+		hub.ServeWs(h, w, r, logger)
 	})
 
-	log.Println("Server stating on :8080")
+	logger.PrintInfo("Server stating", map[string]any{"port": "8080"})
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
