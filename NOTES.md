@@ -15,9 +15,10 @@ Architecture
 
 ## Tasks
 
-- [] Update the chat / message hub to display small drawings in the shared HTML
-  - Send points to the HTML, then have the HTML draw them
-- [] When a user draws in the HTML, we need to create calls in the Golang Websocket that
-  share that JSON to the rest of the clients connected to it
-- [] Split the messages into smaller chunks, if we keep sending one large message with all
-  points it will fail
+- [] Drawing Rooms
+  - Have the user elect a room with some code, then enter to that drawing room
+- [] Send all canvas code upon first registering
+  - Upon first signing in, the user will get the latest canvas code
+  - He will then be able to add his updates to the canvas
+- [] Select color and width as some toolbar
+- [] Clear canvas command
