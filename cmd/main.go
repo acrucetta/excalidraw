@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func serveHome(w http.ResponseWriter, r *http.Request) {
+func serveLobby(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL)
 	if r.URL.Path != "/" {
 		http.Error(w, "Not found", http.StatusNotFound)
@@ -27,7 +27,18 @@ func main() {
 
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
-	http.HandleFunc("/", serveHome)
+	// Home needs to be the code UI
+	// Once the user enters the code, we open a new room
+
+	// TODO: New room functionality
+	http.HandleFunc("/", serveLobby)
+
+	// User submits code
+	// http.HandleFunc("/join", serveHome)
+
+	// Redirect to room/code
+	// http.HandleFunc("/room/{code}", serveHome)
+
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		hub.ServeWs(h, w, r, logger)
 	})

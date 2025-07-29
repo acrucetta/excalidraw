@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Join Room Lobby</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f7f7;
+      display: flex;
+      height: 100vh;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .lobby-container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    input[type="text"] {
+      padding: 0.6rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      width: 100%;
+    }
+
+    button {
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #4caf50;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="lobby-container">
+    <h2>Join a Room</h2>
+    <form id="join-form">
+      <input type="text" id="roomCode" name="roomCode" placeholder="Enter Room Code" required />
+      <br>
+      <button type="submit">Join</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('join-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const code = document.getElementById('roomCode').value.trim();
+      if (code) {
+        // Add logic to call endpoint to create the room in Golang
+        // Redirect to that next html
+        window.location.href = `/room/${encodeURIComponent(code)}`;
+      }
+    });
+  </script>
+</body>
+</html>
