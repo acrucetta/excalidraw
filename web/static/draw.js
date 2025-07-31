@@ -1,20 +1,36 @@
 window.addEventListener('load', () => {
   const canvas = document.getElementById('draw-canvas');
   const ctx = canvas.getContext('2d');
+  const colorPicker = document.getElementById('color-picker');
   const proto = location.protocol === "https:" ? "wss" : "ws";
 
   const pathParts = window.location.pathname.split("/");
-  const roomCode = pathParts[2] | "";
+  const roomCode = pathParts[2] || "";
   const ws = new WebSocket(`${proto}://${location.host}/ws?room=${roomCode}`); 
 
 
   let drawing = false;
   let lastX = 0, lastY = 0;
   let currentStroke = null;
+  let currentColor = '#000000';
 
   ws.addEventListener("open", (event) => {
     console.log()
   })
+
+  // Color picker event listener
+  colorPicker.addEventListener('change', (e) => {
+    currentColor = e.target.value;
+  });
+
+  // Mouse enter/leave events for cursor
+  canvas.addEventListener('mouseenter', () => {
+    canvas.classList.add('drawing');
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    canvas.classList.remove('drawing');
+  });
 
   // Draw incoming strokes
   ws.addEventListener('message', ev => {
@@ -28,7 +44,7 @@ window.addEventListener('load', () => {
     drawing = true;
     [lastX, lastY] = [e.offsetX, e.offsetY];
     currentStroke = {
-      Color: '#000',
+      Color: currentColor,
       Width: 2,
       PlayerID: 'user123'
     }

@@ -4,8 +4,60 @@
 <title>Canvas Example</title>
 <script src="/static/draw.js" defer>
 </script>
+<style>
+  body {
+    margin: 0;
+    padding: 0.5em;
+    font-family: Arial, sans-serif;
+  }
+  
+  .controls {
+    position: absolute;
+    top: 0.5em;
+    left: 620px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .color-picker-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  label {
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+  
+  #color-picker {
+    width: 50px;
+    height: 30px;
+    border: none;
+    cursor: pointer;
+  }
+  
+  #draw-canvas {
+    border: 1px solid #000;
+    background: white;
+    position: absolute;
+    top: 0.5em;
+    left: 0.5em;
+  }
+  
+  #draw-canvas.drawing {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19 7-7 3 3-7 7-3-3z"></path><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="m2 2 7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>') 12 12, crosshair;
+  }
+</style>
 </head>
 <body>
-<canvas id="draw-canvas" width="600" height="600" style="border:1px solid #000; background:white; position:absolute; top:0.5em; left:0.5em; right:0.5em;"></canvas>
+<canvas id="draw-canvas" width="600" height="600"></canvas>
+<div class="controls">
+  <div class="color-picker-container">
+    <label for="color-picker">Drawing Color:</label>
+    <input type="color" id="color-picker" value="#000000">
+  </div>
+</div>
 </body>
 </html> 

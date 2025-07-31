@@ -15,9 +15,9 @@
 
 ## Tasks
 
-- [] Drawing Rooms
+- [X] Drawing Rooms
   - Have the user elect a room with some code, then enter to that drawing room
-- [] Send all canvas code upon first registering
+- [X] Send all canvas code upon first registering
   - Upon first signing in, the user will get the latest canvas code
   - He will then be able to add his updates to the canvas
 - [] Select color and width as some toolbar
