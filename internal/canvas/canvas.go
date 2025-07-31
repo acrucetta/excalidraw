@@ -1,4 +1,4 @@
-package game
+package canvas
 
 type Canvas struct {
 	Strokes []StrokeSegment

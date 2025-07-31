@@ -2,7 +2,11 @@ window.addEventListener('load', () => {
   const canvas = document.getElementById('draw-canvas');
   const ctx = canvas.getContext('2d');
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+
+  const pathParts = window.location.pathname.split("/");
+  const roomCode = pathParts[2] | "";
+  const ws = new WebSocket(`${proto}://${location.host}/ws?room=${roomCode}`); 
+
 
   let drawing = false;
   let lastX = 0, lastY = 0;

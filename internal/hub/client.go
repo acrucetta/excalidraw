@@ -2,10 +2,8 @@ package hub
 
 import (
 	"encoding/json"
-	"log"
-	game "multi-draw/internal/drawing"
+	canvas "multi-draw/internal/canvas"
 	"multi-draw/internal/jsonlog"
-	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -25,16 +23,11 @@ const (
 	maxMessageSize = 4096
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 type Client struct {
-	hub    *Hub
-	conn   *websocket.Conn
-	send   chan game.StrokeSegment
-	logger *jsonlog.Logger
+	Hub    *Hub
+	Conn   *websocket.Conn
+	Send   chan canvas.StrokeSegment
+	Logger *jsonlog.Logger
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -44,30 +37,33 @@ type Client struct {
 // reads from this goroutine.
 func (c *Client) ReadPump() {
 	defer func() {
-		c.hub.unregister <- c
-		c.conn.Close()
+		c.Hub.Unregister <- c
+		c.Conn.Close()
 	}()
-	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.Conn.SetReadLimit(maxMessageSize)
+	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				c.logger.PrintError(err, nil)
+				c.Logger.PrintError(err, nil)
 			}
 			break
 		}
-		var s game.StrokeSegment
+		var s canvas.StrokeSegment
 		if err := json.Unmarshal(message, &s); err != nil {
-			c.logger.PrintError(err, map[string]any{
+			c.Logger.PrintError(err, map[string]any{
 				"message": "Error parsing the JSON structure",
 			})
 		}
-		c.logger.PrintInfo("Received new stroke", map[string]any{
+		c.Logger.PrintInfo("Received new stroke", map[string]any{
 			"segment": s,
 		})
-		c.hub.broadcast <- s
+		if c.Hub.History != nil {
+			*c.Hub.History = append(*c.Hub.History, s)
+		}
+		c.Hub.Broadcast <- s
 	}
 }
 
@@ -80,39 +76,25 @@ func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		c.Conn.Close()
 	}()
 	for {
 		select {
-		case stroke, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		case stroke, ok := <-c.Send:
+			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			if err := c.conn.WriteJSON(stroke); err != nil {
+			if err := c.Conn.WriteJSON(stroke); err != nil {
 				return
 			}
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}
 	}
-}
-
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, logger *jsonlog.Logger) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	client := &Client{hub: hub, conn: conn, send: make(chan game.StrokeSegment, 256), logger: logger}
-	logger.PrintInfo("Registering a new client", map[string]any{})
-	client.hub.register <- client
-	go client.WritePump()
-	go client.ReadPump()
 }

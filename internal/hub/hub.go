@@ -1,40 +1,42 @@
 package hub
 
-import game "multi-draw/internal/drawing"
+import canvas "multi-draw/internal/canvas"
 
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan game.StrokeSegment
-	register   chan *Client
-	unregister chan *Client
+	Clients    map[*Client]bool
+	Broadcast  chan canvas.StrokeSegment
+	Register   chan *Client
+	Unregister chan *Client
+	History    *[]canvas.StrokeSegment
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan game.StrokeSegment, 256),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
+		Broadcast:  make(chan canvas.StrokeSegment, 256),
+		Register:   make(chan *Client),
+		Unregister: make(chan *Client),
+		Clients:    make(map[*Client]bool),
+		History:    nil,
 	}
 }
 
 func (h *Hub) Run() {
 	for {
 		select {
-		case client := <-h.register:
-			h.clients[client] = true
-		case client := <-h.unregister:
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				close(client.send)
+		case client := <-h.Register:
+			h.Clients[client] = true
+		case client := <-h.Unregister:
+			if _, ok := h.Clients[client]; ok {
+				delete(h.Clients, client)
+				close(client.Send)
 			}
-		case message := <-h.broadcast:
-			for client := range h.clients {
+		case message := <-h.Broadcast:
+			for client := range h.Clients {
 				select {
-				case client.send <- message:
+				case client.Send <- message:
 				default:
-					close(client.send)
-					delete(h.clients, client)
+					close(client.Send)
+					delete(h.Clients, client)
 				}
 			}
 		}
